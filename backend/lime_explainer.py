@@ -1,4 +1,5 @@
 import os
+import gc
 import numpy as np
 from PIL import Image
 
@@ -12,9 +13,12 @@ from backend.model import predict_batch, CLASS_NAMES
 # LIME EXPLAINER
 # ============================================================
 
-def explain_image(image, num_samples=500):
+def explain_image(image, num_samples=25):
     """
-    Generate a LIME explanation for a retinal image.
+    Generate a memory-optimized LIME explanation
+    for a diabetic retinopathy retinal image.
+
+    Optimized for low-memory cloud deployment.
 
     Parameters:
         image: PIL Image
@@ -32,19 +36,22 @@ def explain_image(image, num_samples=500):
 
     image = image.convert("RGB")
 
-    # LIME works with NumPy arrays
-    image_np = np.array(image)
-
     # --------------------------------------------------------
-    # Resize for LIME
+    # Resize image for LIME
     # --------------------------------------------------------
 
-    image_pil = image.resize((224, 224))
+    image_pil = image.resize(
+        (224, 224),
+        Image.Resampling.BILINEAR
+    )
 
-    image_np = np.array(image_pil)
+    image_np = np.asarray(
+        image_pil,
+        dtype=np.float32
+    )
 
-    # Convert to float [0, 1]
-    image_float = image_np.astype(np.float32) / 255.0
+    # Convert pixel values to [0, 1]
+    image_float = image_np / 255.0
 
     # --------------------------------------------------------
     # Create LIME explainer
@@ -63,7 +70,8 @@ def explain_image(image, num_samples=500):
         predict_batch,
         top_labels=5,
         hide_color=0,
-        num_samples=num_samples
+        num_samples=num_samples,
+        batch_size=5
     )
 
     # --------------------------------------------------------
@@ -73,7 +81,7 @@ def explain_image(image, num_samples=500):
     predicted_class = explanation.top_labels[0]
 
     # --------------------------------------------------------
-    # Get image + mask
+    # Get image and mask
     # --------------------------------------------------------
 
     temp, mask = explanation.get_image_and_mask(
@@ -92,10 +100,15 @@ def explain_image(image, num_samples=500):
         mask
     )
 
-    # Convert to uint8
+    # Convert to uint8 safely
     lime_image_array = (
-        lime_image_array * 255
-    ).astype(np.uint8)
+        lime_image_array * 255.0
+    ).clip(
+        0,
+        255
+    ).astype(
+        np.uint8
+    )
 
     explanation_image = Image.fromarray(
         lime_image_array
@@ -113,6 +126,21 @@ def explain_image(image, num_samples=500):
         probabilities[predicted_class]
     )
 
+    # --------------------------------------------------------
+    # Free memory
+    # --------------------------------------------------------
+
+    del image_pil
+    del image_np
+    del image_float
+    del explanation
+    del temp
+    del mask
+    del lime_image_array
+    del probabilities
+
+    gc.collect()
+
     return (
         explanation_image,
         predicted_class,
@@ -127,7 +155,7 @@ def explain_image(image, num_samples=500):
 def save_lime_explanation(
     image,
     output_path,
-    num_samples=500
+    num_samples=25
 ):
     """
     Generate and save LIME explanation.
@@ -138,15 +166,32 @@ def save_lime_explanation(
         num_samples=num_samples
     )
 
-    # Make sure output directory exists
-    os.makedirs(
-        os.path.dirname(output_path),
-        exist_ok=True
-    )
+    # --------------------------------------------------------
+    # Create output directory
+    # --------------------------------------------------------
+
+    output_dir = os.path.dirname(output_path)
+
+    if output_dir:
+        os.makedirs(
+            output_dir,
+            exist_ok=True
+        )
+
+    # --------------------------------------------------------
+    # Save optimized JPEG
+    # --------------------------------------------------------
 
     explanation_image.save(
-        output_path
+        output_path,
+        format="JPEG",
+        quality=85,
+        optimize=True
     )
+
+    # --------------------------------------------------------
+    # Return result
+    # --------------------------------------------------------
 
     return {
         "predicted_class": predicted_class,

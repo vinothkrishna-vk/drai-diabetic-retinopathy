@@ -1,5 +1,7 @@
 import os
 import uuid
+import gc
+import io
 
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,13 +16,26 @@ from backend.lime_explainer import explain_image
 # PATHS
 # ============================================================
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR = os.path.dirname(
+    os.path.dirname(
+        os.path.abspath(__file__)
+    )
+)
 
-FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
+FRONTEND_DIR = os.path.join(
+    BASE_DIR,
+    "frontend"
+)
 
-LIME_DIR = os.path.join(BASE_DIR, "lime_results")
+LIME_DIR = os.path.join(
+    BASE_DIR,
+    "lime_results"
+)
 
-os.makedirs(LIME_DIR, exist_ok=True)
+os.makedirs(
+    LIME_DIR,
+    exist_ok=True
+)
 
 
 # ============================================================
@@ -144,24 +159,28 @@ async def predict(file: UploadFile = File(...)):
     # Check file type
     # --------------------------------------------------------
 
-    if not file.content_type or not file.content_type.startswith("image/"):
-
+    if (
+        not file.content_type
+        or not file.content_type.startswith("image/")
+    ):
         raise HTTPException(
             status_code=400,
             detail="Please upload a valid image file."
         )
 
-
     # --------------------------------------------------------
     # Read image
     # --------------------------------------------------------
+
+    contents = None
+    image = None
 
     try:
 
         contents = await file.read()
 
         image = Image.open(
-            __import__("io").BytesIO(contents)
+            io.BytesIO(contents)
         ).convert("RGB")
 
     except Exception:
@@ -171,6 +190,9 @@ async def predict(file: UploadFile = File(...)):
             detail="Unable to read the uploaded image."
         )
 
+    finally:
+
+        contents = None
 
     # --------------------------------------------------------
     # MODEL PREDICTION
@@ -182,9 +204,13 @@ async def predict(file: UploadFile = File(...)):
             image
         )
 
-        predicted_class = int(predicted_class)
+        predicted_class = int(
+            predicted_class
+        )
 
-        confidence = float(confidence)
+        confidence = float(
+            confidence
+        )
 
         probabilities = [
             float(p)
@@ -198,7 +224,6 @@ async def predict(file: UploadFile = File(...)):
             detail=f"Model prediction failed: {str(e)}"
         )
 
-
     # --------------------------------------------------------
     # LIME EXPLANATION
     # --------------------------------------------------------
@@ -211,42 +236,71 @@ async def predict(file: UploadFile = File(...)):
 
     try:
 
-        lime_image, lime_class, lime_confidence = explain_image(
-            image,
-            num_samples=100
+        print(
+            "Starting lightweight LIME explanation..."
         )
 
-        # Convert NumPy values to Python values
-        lime_class = int(lime_class)
+        # IMPORTANT:
+        # Reduced from 100 samples to 25 samples
+        # to prevent Render memory exhaustion.
 
-        lime_confidence = float(lime_confidence)
+        lime_image, lime_class, lime_confidence = explain_image(
+            image,
+            num_samples=25
+        )
 
+        lime_class = int(
+            lime_class
+        )
 
+        lime_confidence = float(
+            lime_confidence
+        )
+
+        # ----------------------------------------------------
         # Unique filename
+        # ----------------------------------------------------
+
         lime_filename = (
             f"lime_{uuid.uuid4().hex}.jpg"
         )
-
 
         lime_path = os.path.join(
             LIME_DIR,
             lime_filename
         )
 
-
+        # ----------------------------------------------------
         # Save LIME result
+        # ----------------------------------------------------
+
         lime_image.save(
             lime_path,
             format="JPEG",
-            quality=95
+            quality=85,
+            optimize=True
         )
+
+        print(
+            f"LIME explanation saved: {lime_filename}"
+        )
+
+        # Free LIME image memory
+        del lime_image
 
     except Exception as e:
 
-        print("LIME ERROR:", e)
+        print(
+            "LIME ERROR:",
+            str(e)
+        )
 
         lime_filename = None
 
+    finally:
+
+        # Force Python garbage collection
+        gc.collect()
 
     # ========================================================
     # RESPONSE
@@ -316,6 +370,11 @@ async def predict(file: UploadFile = File(...)):
         }
     }
 
+    # --------------------------------------------------------
+    # Final memory cleanup
+    # --------------------------------------------------------
+
+    gc.collect()
 
     return response
 
@@ -332,14 +391,12 @@ def get_lime_image(filename: str):
         filename
     )
 
-
     if not os.path.isfile(file_path):
 
         raise HTTPException(
             status_code=404,
             detail="LIME image not found."
         )
-
 
     return FileResponse(
         file_path,

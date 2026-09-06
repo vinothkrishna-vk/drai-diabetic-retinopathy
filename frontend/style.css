@@ -1,0 +1,649 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --bg: #f5f7fb;
+    --card: #ffffff;
+    --text: #172033;
+    --muted: #667085;
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --border: #e5e7eb;
+    --success: #16a34a;
+    --warning: #f59e0b;
+    --danger: #dc2626;
+}
+
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+}
+
+/* =========================
+   GLOBAL
+========================= */
+
+.container {
+    width: min(1100px, 92%);
+    margin: auto;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* =========================
+   HEADER
+========================= */
+
+.header {
+    background: #ffffff;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.nav {
+    height: 76px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.logo-icon {
+    font-size: 32px;
+}
+
+.logo h1 {
+    font-size: 25px;
+    line-height: 1;
+    font-weight: 800;
+}
+
+.logo h1 span {
+    color: var(--primary);
+}
+
+.logo small {
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f0fdf4;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+    padding: 8px 14px;
+    border-radius: 30px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    background: #22c55e;
+    border-radius: 50%;
+}
+
+/* =========================
+   HERO
+========================= */
+
+.hero {
+    text-align: center;
+    padding: 65px 20px 45px;
+}
+
+.hero-badge {
+    display: inline-block;
+    padding: 7px 14px;
+    border-radius: 30px;
+    background: #eff6ff;
+    color: var(--primary);
+    border: 1px solid #dbeafe;
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 18px;
+}
+
+.hero h2 {
+    font-size: clamp(34px, 5vw, 56px);
+    line-height: 1.1;
+    letter-spacing: -1.5px;
+    margin-bottom: 20px;
+}
+
+.hero h2 span {
+    color: var(--primary);
+}
+
+.hero p {
+    max-width: 720px;
+    margin: auto;
+    color: var(--muted);
+    font-size: 17px;
+}
+
+/* =========================
+   CARDS
+========================= */
+
+.card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 28px;
+    margin-bottom: 24px;
+    box-shadow: 0 8px 30px rgba(15, 23, 42, 0.05);
+}
+
+.section-title {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    margin-bottom: 22px;
+}
+
+.title-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: #eff6ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 21px;
+}
+
+.section-title h3 {
+    font-size: 19px;
+}
+
+.section-title p {
+    color: var(--muted);
+    font-size: 13px;
+}
+
+/* =========================
+   UPLOAD
+========================= */
+
+.drop-zone {
+    border: 2px dashed #cbd5e1;
+    border-radius: 16px;
+    padding: 50px 20px;
+    text-align: center;
+    background: #f8fafc;
+    transition: 0.25s ease;
+}
+
+.drop-zone:hover,
+.drop-zone.dragover {
+    border-color: var(--primary);
+    background: #eff6ff;
+}
+
+.upload-icon {
+    font-size: 42px;
+    margin-bottom: 10px;
+}
+
+.drop-zone h3 {
+    font-size: 18px;
+}
+
+.drop-zone p {
+    color: var(--muted);
+    margin: 8px 0;
+}
+
+.choose-btn {
+    display: inline-block;
+    background: var(--primary);
+    color: white;
+    padding: 11px 22px;
+    border-radius: 9px;
+    cursor: pointer;
+    font-weight: 700;
+    transition: 0.2s;
+}
+
+.choose-btn:hover {
+    background: var(--primary-dark);
+}
+
+.file-name {
+    margin-top: 15px;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+/* =========================
+   PREVIEW
+========================= */
+
+.preview-container {
+    margin-top: 24px;
+    text-align: center;
+}
+
+.preview-container h4 {
+    margin-bottom: 12px;
+}
+
+.preview-container img {
+    max-width: 100%;
+    max-height: 350px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+}
+
+/* =========================
+   BUTTON
+========================= */
+
+.analyze-btn {
+    width: 100%;
+    border: none;
+    background: var(--primary);
+    color: white;
+    padding: 15px;
+    margin-top: 22px;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.analyze-btn:hover:not(:disabled) {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+}
+
+.analyze-btn:disabled {
+    background: #cbd5e1;
+    cursor: not-allowed;
+}
+
+/* =========================
+   LOADING
+========================= */
+
+.loading {
+    text-align: center;
+    padding: 25px 10px 5px;
+}
+
+.spinner {
+    width: 38px;
+    height: 38px;
+    border: 4px solid #dbeafe;
+    border-top: 4px solid var(--primary);
+    border-radius: 50%;
+    margin: auto auto 12px;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.loading p {
+    font-weight: 600;
+}
+
+.loading small {
+    color: var(--muted);
+}
+
+/* =========================
+   ERROR
+========================= */
+
+.error-box {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #991b1b;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+}
+
+.error-box p {
+    margin-top: 4px;
+}
+
+/* =========================
+   RESULT
+========================= */
+
+.result-card {
+    border-left: 5px solid var(--primary);
+}
+
+.result-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.result-label {
+    color: var(--primary);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    margin-bottom: 5px;
+}
+
+.result-header h2 {
+    font-size: 30px;
+}
+
+.confidence {
+    text-align: center;
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 24px;
+    min-width: 150px;
+}
+
+.confidence span {
+    display: block;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.confidence strong {
+    display: block;
+    color: var(--primary);
+    font-size: 27px;
+}
+
+.result-note {
+    margin-top: 22px;
+    padding: 13px 16px;
+    display: flex;
+    gap: 10px;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 10px;
+    color: #92400e;
+    font-size: 13px;
+}
+
+/* =========================
+   PROBABILITIES
+========================= */
+
+.probabilities {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.probability-row {
+    display: grid;
+    grid-template-columns: 220px 1fr 70px;
+    align-items: center;
+    gap: 12px;
+}
+
+.probability-label {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.progress {
+    height: 10px;
+    background: #e5e7eb;
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    background: var(--primary);
+    border-radius: 20px;
+    transition: width 0.8s ease;
+}
+
+.probability-value {
+    text-align: right;
+    font-weight: 700;
+    font-size: 14px;
+}
+
+/* =========================
+   IMAGE GRID
+========================= */
+
+.image-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+.image-card {
+    margin-bottom: 0;
+}
+
+.image-wrapper {
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px;
+    min-height: 280px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.image-wrapper img {
+    width: 100%;
+    max-height: 450px;
+    object-fit: contain;
+    border-radius: 8px;
+}
+
+/* =========================
+   EXPLANATION
+========================= */
+
+.explanation-content {
+    color: #475467;
+}
+
+.explanation-content strong {
+    color: var(--text);
+}
+
+.legend {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+}
+
+.legend-positive,
+.legend-negative {
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+}
+
+.legend-positive {
+    background: #ef4444;
+}
+
+.legend-negative {
+    background: #3b82f6;
+}
+
+/* =========================
+   TECHNICAL
+========================= */
+
+.technical-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+}
+
+.technical-grid div {
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 17px;
+}
+
+.technical-grid span {
+    display: block;
+    color: var(--muted);
+    font-size: 12px;
+    margin-bottom: 5px;
+}
+
+.technical-grid strong {
+    font-size: 15px;
+}
+
+/* =========================
+   NEW ANALYSIS
+========================= */
+
+.new-analysis-btn {
+    display: block;
+    margin: 30px auto 60px;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: white;
+    padding: 12px 24px;
+    border-radius: 9px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.new-analysis-btn:hover {
+    background: #eff6ff;
+}
+
+/* =========================
+   FOOTER
+========================= */
+
+footer {
+    background: #172033;
+    color: white;
+    text-align: center;
+    padding: 35px 20px;
+}
+
+footer p {
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+footer small {
+    color: #aab2c0;
+}
+
+/* =========================
+   MOBILE
+========================= */
+
+@media (max-width: 800px) {
+
+    .nav {
+        height: 70px;
+    }
+
+    .status {
+        display: none;
+    }
+
+    .hero {
+        padding-top: 45px;
+    }
+
+    .hero h2 {
+        font-size: 36px;
+    }
+
+    .image-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .technical-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .probability-row {
+        grid-template-columns: 1fr;
+        gap: 5px;
+    }
+
+    .probability-value {
+        text-align: left;
+    }
+
+    .result-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .confidence {
+        width: 100%;
+    }
+}
+
+@media (max-width: 500px) {
+
+    .card {
+        padding: 20px;
+    }
+
+    .hero h2 {
+        font-size: 30px;
+    }
+
+    .hero p {
+        font-size: 15px;
+    }
+
+    .technical-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .drop-zone {
+        padding: 35px 15px;
+    }
+}

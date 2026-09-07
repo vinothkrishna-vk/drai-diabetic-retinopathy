@@ -1,27 +1,22 @@
 import os
 import numpy as np
-import torch
+import onnxruntime as ort
 
 from PIL import Image
-from torch import nn
-from torchvision import models, transforms
 
 
 # ============================================================
 # CONFIGURATION
 # ============================================================
 
-# Get the project root:
-# dr_web_app/
 BASE_DIR = os.path.dirname(
     os.path.dirname(os.path.abspath(__file__))
 )
 
-# Path to trained model
 MODEL_PATH = os.path.join(
     BASE_DIR,
     "models",
-    "dr_model_best.pth"
+    "dr_model.onnx"
 )
 
 
@@ -39,77 +34,94 @@ CLASS_NAMES = [
 
 
 # ============================================================
-# DEVICE
+# IMAGE PREPROCESSING
 # ============================================================
 
-DEVICE = torch.device(
-    "cuda" if torch.cuda.is_available() else "cpu"
+MEAN = np.array(
+    [0.485, 0.456, 0.406],
+    dtype=np.float32
+)
+
+STD = np.array(
+    [0.229, 0.224, 0.225],
+    dtype=np.float32
 )
 
 
-# ============================================================
-# IMAGE TRANSFORMATION
-# ============================================================
+def preprocess_image(image):
+    """
+    Convert PIL image into the exact format
+    expected by the EfficientNet-B0 ONNX model.
+    """
 
-transform = transforms.Compose([
-    transforms.Resize((224, 224)),
+    # Make sure image is RGB
+    image = image.convert("RGB")
 
-    transforms.ToTensor(),
-
-    transforms.Normalize(
-        [0.485, 0.456, 0.406],
-        [0.229, 0.224, 0.225]
+    # Resize exactly like torchvision
+    image = image.resize(
+        (224, 224),
+        Image.Resampling.BILINEAR
     )
-])
+
+    # PIL → NumPy
+    image_array = np.asarray(
+        image,
+        dtype=np.float32
+    )
+
+    # Convert 0-255 → 0-1
+    image_array = image_array / 255.0
+
+    # Normalize using ImageNet mean/std
+    image_array = (
+        image_array - MEAN
+    ) / STD
+
+    # HWC → CHW
+    image_array = np.transpose(
+        image_array,
+        (2, 0, 1)
+    )
+
+    # Add batch dimension
+    image_array = np.expand_dims(
+        image_array,
+        axis=0
+    )
+
+    return image_array.astype(
+        np.float32
+    )
 
 
 # ============================================================
-# LOAD MODEL
+# LOAD ONNX MODEL
 # ============================================================
 
 def load_model():
 
     print("Loading DR model...")
 
-    print(f"Model path: {MODEL_PATH}")
-
-    print(f"Using device: {DEVICE}")
-
-    # Create EfficientNet-B0
-    model = models.efficientnet_b0(
-        weights=None
+    print(
+        f"ONNX model path: {MODEL_PATH}"
     )
 
-    # Change final classifier to 5 classes
-    model.classifier[1] = nn.Linear(
-        model.classifier[1].in_features,
-        5
-    )
-
-    # Check model file
     if not os.path.exists(MODEL_PATH):
 
         raise FileNotFoundError(
-            f"Model file not found: {MODEL_PATH}"
+            f"ONNX model file not found: {MODEL_PATH}"
         )
 
-    # Load trained weights
-    model.load_state_dict(
-        torch.load(
-            MODEL_PATH,
-            map_location=DEVICE
-        )
+    session = ort.InferenceSession(
+        MODEL_PATH,
+        providers=["CPUExecutionProvider"]
     )
 
-    # Move model to CPU/GPU
-    model = model.to(DEVICE)
+    print(
+        "ONNX model loaded successfully."
+    )
 
-    # Evaluation mode
-    model.eval()
-
-    print("Model loaded successfully.")
-
-    return model
+    return session
 
 
 # ============================================================
@@ -118,6 +130,30 @@ def load_model():
 
 model = load_model()
 
+INPUT_NAME = model.get_inputs()[0].name
+OUTPUT_NAME = model.get_outputs()[0].name
+
+
+# ============================================================
+# SOFTMAX
+# ============================================================
+
+def softmax(logits):
+
+    logits = logits - np.max(
+        logits,
+        axis=1,
+        keepdims=True
+    )
+
+    exp_values = np.exp(logits)
+
+    return exp_values / np.sum(
+        exp_values,
+        axis=1,
+        keepdims=True
+    )
+
 
 # ============================================================
 # PREDICT SINGLE IMAGE
@@ -125,7 +161,8 @@ model = load_model()
 
 def predict_image(image):
     """
-    Predict diabetic retinopathy grade for one PIL image.
+    Predict diabetic retinopathy grade
+    for one PIL image.
 
     Returns:
         predicted_class
@@ -133,44 +170,35 @@ def predict_image(image):
         probabilities
     """
 
-    # Make sure image is RGB
-    image = image.convert("RGB")
-
-    # Apply preprocessing
-    input_tensor = transform(
+    # Preprocess image
+    input_array = preprocess_image(
         image
-    ).unsqueeze(0).to(DEVICE)
+    )
 
-    # Disable gradient calculation
-    with torch.no_grad():
+    # ONNX prediction
+    outputs = model.run(
+        [OUTPUT_NAME],
+        {
+            INPUT_NAME: input_array
+        }
+    )
 
-        # Model prediction
-        outputs = model(
-            input_tensor
-        )
+    logits = outputs[0]
 
-        # Convert logits to probabilities
-        probabilities = torch.softmax(
-            outputs,
-            dim=1
-        )
+    # Convert logits → probabilities
+    probabilities = softmax(
+        logits
+    )[0]
 
-        # Get highest probability class
-        predicted_class = torch.argmax(
-            probabilities,
-            dim=1
-        ).item()
+    # Highest probability class
+    predicted_class = int(
+        np.argmax(probabilities)
+    )
 
-    # Get confidence
-    confidence = probabilities[
-        0,
-        predicted_class
-    ].item()
-
-    # Convert probabilities to NumPy
-    probabilities = probabilities[
-        0
-    ].cpu().numpy()
+    # Confidence
+    confidence = float(
+        probabilities[predicted_class]
+    )
 
     return (
         predicted_class,
@@ -187,7 +215,7 @@ def predict_batch(images):
     """
     Predict multiple images.
 
-    Used later by LIME because LIME generates
+    Used by LIME because LIME generates
     many modified versions of the image.
     """
 
@@ -195,14 +223,14 @@ def predict_batch(images):
 
     for image in images:
 
-        # Convert NumPy image to valid range
+        # Keep values between 0 and 1
         image = np.clip(
             image,
             0,
             1
         )
 
-        # Convert NumPy → PIL
+        # NumPy → PIL
         image_pil = Image.fromarray(
             (
                 image * 255
@@ -211,30 +239,35 @@ def predict_batch(images):
             )
         ).convert("RGB")
 
-        # Apply preprocessing
-        tensor = transform(
+        # Preprocess
+        processed = preprocess_image(
             image_pil
-        )
+        )[0]
 
         batch.append(
-            tensor
+            processed
         )
 
-    # Combine images into one batch
-    batch = torch.stack(
+    # Combine into batch
+    batch = np.stack(
         batch
-    ).to(DEVICE)
+    ).astype(
+        np.float32
+    )
 
-    # Model prediction
-    with torch.no_grad():
+    # ONNX prediction
+    outputs = model.run(
+        [OUTPUT_NAME],
+        {
+            INPUT_NAME: batch
+        }
+    )
 
-        outputs = model(
-            batch
-        )
+    logits = outputs[0]
 
-        probabilities = torch.softmax(
-            outputs,
-            dim=1
-        )
+    # Convert logits → probabilities
+    probabilities = softmax(
+        logits
+    )
 
-    return probabilities.cpu().numpy()
+    return probabilities

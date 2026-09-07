@@ -5,3 +5,8 @@ venv/
 .env
 lime_results/*
 test_images/*
+
+# ONNX conversion/testing files
+convert_model.py
+test_onnx.py
+backend/model_pytorch_backup.py

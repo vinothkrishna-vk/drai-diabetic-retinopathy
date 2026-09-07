@@ -1,0 +1,13 @@
+.git
+.github
+__pycache__
+*.pyc
+.venv
+venv
+lime_results/*
+test_images/*
+dataset
+deploy
+notebook
+output
+src

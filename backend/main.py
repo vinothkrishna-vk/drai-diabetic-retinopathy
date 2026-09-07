@@ -1,7 +1,7 @@
 import os
-import uuid
 import gc
 import io
+import base64
 
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -25,16 +25,6 @@ BASE_DIR = os.path.dirname(
 FRONTEND_DIR = os.path.join(
     BASE_DIR,
     "frontend"
-)
-
-LIME_DIR = os.path.join(
-    BASE_DIR,
-    "lime_results"
-)
-
-os.makedirs(
-    LIME_DIR,
-    exist_ok=True
 )
 
 
@@ -156,7 +146,7 @@ def health():
 async def predict(file: UploadFile = File(...)):
 
     # --------------------------------------------------------
-    # Check file type
+    # CHECK FILE TYPE
     # --------------------------------------------------------
 
     if (
@@ -169,7 +159,7 @@ async def predict(file: UploadFile = File(...)):
         )
 
     # --------------------------------------------------------
-    # Read image
+    # READ IMAGE
     # --------------------------------------------------------
 
     contents = None
@@ -225,24 +215,38 @@ async def predict(file: UploadFile = File(...)):
         )
 
     # --------------------------------------------------------
+    # DR GRADE
+    # --------------------------------------------------------
+
+    # The model uses the standard 5 DR grades:
+    #
+    # 0 = No DR
+    # 1 = Mild
+    # 2 = Moderate
+    # 3 = Severe
+    # 4 = Proliferative
+
+    dr_grade = predicted_class
+
+    dr_grade_label = f"Grade {dr_grade}"
+
+    # --------------------------------------------------------
     # LIME EXPLANATION
     # --------------------------------------------------------
 
-    lime_filename = None
+    lime_available = False
 
     lime_class = predicted_class
 
     lime_confidence = confidence
+
+    lime_image_data = None
 
     try:
 
         print(
             "Starting lightweight LIME explanation..."
         )
-
-        # IMPORTANT:
-        # Reduced from 100 samples to 25 samples
-        # to prevent Render memory exhaustion.
 
         lime_image, lime_class, lime_confidence = explain_image(
             image,
@@ -258,35 +262,52 @@ async def predict(file: UploadFile = File(...)):
         )
 
         # ----------------------------------------------------
-        # Unique filename
+        # Convert LIME image to JPEG in memory
         # ----------------------------------------------------
 
-        lime_filename = (
-            f"lime_{uuid.uuid4().hex}.jpg"
-        )
-
-        lime_path = os.path.join(
-            LIME_DIR,
-            lime_filename
-        )
-
-        # ----------------------------------------------------
-        # Save LIME result
-        # ----------------------------------------------------
+        image_buffer = io.BytesIO()
 
         lime_image.save(
-            lime_path,
+            image_buffer,
             format="JPEG",
             quality=85,
             optimize=True
         )
 
-        print(
-            f"LIME explanation saved: {lime_filename}"
+        image_bytes = image_buffer.getvalue()
+
+        # ----------------------------------------------------
+        # Convert JPEG to Base64
+        # ----------------------------------------------------
+
+        encoded_image = base64.b64encode(
+            image_bytes
+        ).decode("utf-8")
+
+        lime_image_data = (
+            "data:image/jpeg;base64,"
+            + encoded_image
         )
 
-        # Free LIME image memory
+        lime_available = True
+
+        print(
+            "LIME explanation generated successfully."
+        )
+
+        print(
+            f"LIME image size: "
+            f"{len(image_bytes) / 1024:.2f} KB"
+        )
+
+        # ----------------------------------------------------
+        # CLEANUP
+        # ----------------------------------------------------
+
         del lime_image
+        del image_buffer
+        del image_bytes
+        del encoded_image
 
     except Exception as e:
 
@@ -295,11 +316,12 @@ async def predict(file: UploadFile = File(...)):
             str(e)
         )
 
-        lime_filename = None
+        lime_available = False
+
+        lime_image_data = None
 
     finally:
 
-        # Force Python garbage collection
         gc.collect()
 
     # ========================================================
@@ -312,25 +334,37 @@ async def predict(file: UploadFile = File(...)):
 
         "filename": file.filename,
 
+        # ----------------------------------------------------
+        # PREDICTION
+        # ----------------------------------------------------
+
         "prediction": {
 
-            "predicted_class": int(
-                predicted_class
-            ),
+            # Numerical DR grade
+            "grade": dr_grade,
 
+            # Human-readable grade
+            "grade_label": dr_grade_label,
+
+            # Existing predicted class
+            "predicted_class": predicted_class,
+
+            # Existing class name
             "class_name": CLASS_NAMES[
-                int(predicted_class)
+                predicted_class
             ],
 
+            # Confidence
             "confidence": round(
-                float(confidence) * 100,
+                confidence * 100,
                 2
             ),
 
+            # All class probabilities
             "probabilities": {
 
                 CLASS_NAMES[i]: round(
-                    float(probabilities[i]) * 100,
+                    probabilities[i] * 100,
                     2
                 )
 
@@ -340,65 +374,38 @@ async def predict(file: UploadFile = File(...)):
             }
         },
 
+        # ----------------------------------------------------
+        # LIME
+        # ----------------------------------------------------
+
         "lime": {
 
-            "available": (
-                lime_filename is not None
-            ),
+            "available": lime_available,
 
-            "predicted_class": int(
-                lime_class
-            ),
+            "grade": lime_class,
+
+            "grade_label": f"Grade {lime_class}",
+
+            "predicted_class": lime_class,
 
             "class_name": CLASS_NAMES[
-                int(lime_class)
+                lime_class
             ],
 
             "confidence": round(
-                float(lime_confidence) * 100,
+                lime_confidence * 100,
                 2
             ),
 
-            "image_url": (
-
-                f"/lime/{lime_filename}"
-
-                if lime_filename
-
-                else None
-            )
+            # Direct image data for browser
+            "image_data": lime_image_data
         }
     }
 
     # --------------------------------------------------------
-    # Final memory cleanup
+    # FINAL MEMORY CLEANUP
     # --------------------------------------------------------
 
     gc.collect()
 
     return response
-
-
-# ============================================================
-# SERVE LIME IMAGE
-# ============================================================
-
-@app.get("/lime/{filename}")
-def get_lime_image(filename: str):
-
-    file_path = os.path.join(
-        LIME_DIR,
-        filename
-    )
-
-    if not os.path.isfile(file_path):
-
-        raise HTTPException(
-            status_code=404,
-            detail="LIME image not found."
-        )
-
-    return FileResponse(
-        file_path,
-        media_type="image/jpeg"
-    )

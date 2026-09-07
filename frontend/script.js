@@ -5,7 +5,11 @@
 
 const API_BASE_URL = window.location.origin;
 
-// DOM elements
+
+// ==========================================
+// DOM ELEMENTS
+// ==========================================
+
 const imageInput = document.getElementById("imageInput");
 const dropZone = document.getElementById("dropZone");
 const fileName = document.getElementById("fileName");
@@ -41,7 +45,9 @@ let selectedFile = null;
 imageInput.addEventListener("change", function () {
 
     if (this.files && this.files.length > 0) {
+
         handleFile(this.files[0]);
+
     }
 
 });
@@ -85,17 +91,24 @@ function handleFile(file) {
 
     fileName.textContent = file.name;
 
+
     const reader = new FileReader();
+
 
     reader.onload = function (event) {
 
-        previewImage.src = event.target.result;
+        previewImage.src =
+            event.target.result;
 
-        previewContainer.classList.remove("hidden");
+        previewContainer.classList.remove(
+            "hidden"
+        );
 
     };
 
+
     reader.readAsDataURL(file);
+
 
     analyzeBtn.disabled = false;
 }
@@ -105,37 +118,53 @@ function handleFile(file) {
 // DRAG & DROP
 // ==========================================
 
-dropZone.addEventListener("dragover", function (event) {
+dropZone.addEventListener(
+    "dragover",
+    function (event) {
 
-    event.preventDefault();
+        event.preventDefault();
 
-    dropZone.classList.add("dragover");
-
-});
-
-
-dropZone.addEventListener("dragleave", function () {
-
-    dropZone.classList.remove("dragover");
-
-});
-
-
-dropZone.addEventListener("drop", function (event) {
-
-    event.preventDefault();
-
-    dropZone.classList.remove("dragover");
-
-    const files = event.dataTransfer.files;
-
-    if (files.length > 0) {
-
-        handleFile(files[0]);
+        dropZone.classList.add(
+            "dragover"
+        );
 
     }
+);
 
-});
+
+dropZone.addEventListener(
+    "dragleave",
+    function () {
+
+        dropZone.classList.remove(
+            "dragover"
+        );
+
+    }
+);
+
+
+dropZone.addEventListener(
+    "drop",
+    function (event) {
+
+        event.preventDefault();
+
+        dropZone.classList.remove(
+            "dragover"
+        );
+
+        const files =
+            event.dataTransfer.files;
+
+        if (files.length > 0) {
+
+            handleFile(files[0]);
+
+        }
+
+    }
+);
 
 
 // ==========================================
@@ -161,15 +190,22 @@ async function analyzeImage() {
 
     hideError();
 
-    loading.classList.remove("hidden");
+    loading.classList.remove(
+        "hidden"
+    );
 
     analyzeBtn.disabled = true;
 
-    results.classList.add("hidden");
+    results.classList.add(
+        "hidden"
+    );
+
 
     try {
 
-        const formData = new FormData();
+        const formData =
+            new FormData();
+
 
         formData.append(
             "file",
@@ -177,14 +213,14 @@ async function analyzeImage() {
         );
 
 
-        // Send image to FastAPI
-        const response = await fetch(
-            `${API_BASE_URL}/predict`,
-            {
-                method: "POST",
-                body: formData
-            }
-        );
+        const response =
+            await fetch(
+                `${API_BASE_URL}/predict`,
+                {
+                    method: "POST",
+                    body: formData
+                }
+            );
 
 
         if (!response.ok) {
@@ -192,18 +228,28 @@ async function analyzeImage() {
             let message =
                 "Backend returned an error.";
 
+
             try {
 
                 const errorData =
                     await response.json();
 
+
                 if (errorData.detail) {
-                    message = errorData.detail;
+
+                    message =
+                        errorData.detail;
+
                 }
 
-            } catch (e) {}
+            }
 
-            throw new Error(message);
+            catch (e) {}
+
+
+            throw new Error(
+                message
+            );
         }
 
 
@@ -228,6 +274,7 @@ async function analyzeImage() {
             error
         );
 
+
         showError(
             "Unable to connect to the AI backend. " +
             error.message
@@ -237,7 +284,9 @@ async function analyzeImage() {
 
     finally {
 
-        loading.classList.add("hidden");
+        loading.classList.add(
+            "hidden"
+        );
 
         analyzeBtn.disabled = false;
 
@@ -251,20 +300,46 @@ async function analyzeImage() {
 
 function displayResults(data) {
 
-    // --------------------------------------
-    // PREDICTION
-    // --------------------------------------
-
     const predictionData =
         data.prediction;
 
 
+    // ======================================
+    // PREDICTION
+    // ======================================
+
     if (predictionData) {
 
-        // Use class name directly from FastAPI
-        prediction.textContent =
-            predictionData.class_name ||
-            "Unable to determine grade";
+        // ----------------------------------
+        // DR GRADE
+        // ----------------------------------
+
+        const grade =
+            Number(
+                predictionData.grade
+            );
+
+
+        if (
+            !isNaN(grade) &&
+            grade >= 0 &&
+            grade <= 4
+        ) {
+
+            // Main prediction text
+            prediction.textContent =
+                `Grade ${grade} — ` +
+                `${predictionData.class_name}`;
+
+        }
+
+        else {
+
+            prediction.textContent =
+                predictionData.class_name ||
+                "Unable to determine grade";
+
+        }
 
 
         // ----------------------------------
@@ -282,10 +357,13 @@ function displayResults(data) {
             confidence.textContent =
                 `${confidenceValue.toFixed(2)}%`;
 
-        } else {
+        }
+
+        else {
 
             confidence.textContent =
                 "--%";
+
         }
 
 
@@ -309,23 +387,25 @@ function displayResults(data) {
 
         probabilities.innerHTML =
             "<p>Probability data unavailable.</p>";
+
     }
 
 
-    // --------------------------------------
+    // ======================================
     // ORIGINAL IMAGE
-    // --------------------------------------
+    // ======================================
 
     const reader =
         new FileReader();
 
 
-    reader.onload = function (event) {
+    reader.onload =
+        function (event) {
 
-        originalImage.src =
-            event.target.result;
+            originalImage.src =
+                event.target.result;
 
-    };
+        };
 
 
     reader.readAsDataURL(
@@ -333,21 +413,44 @@ function displayResults(data) {
     );
 
 
-    // --------------------------------------
-    // LIME
-    // --------------------------------------
+    // ======================================
+    // LIME IMAGE
+    // ======================================
 
     if (
         data.lime &&
         data.lime.available &&
-        data.lime.image_url
+        data.lime.image_data
     ) {
 
+        // Direct Base64 image
         limeImage.src =
-            `${API_BASE_URL}${data.lime.image_url}`;
+            data.lime.image_data;
+
 
         limeImage.alt =
-            "LIME explanation of AI prediction";
+            "LIME explanation for " +
+            `Grade ${data.lime.grade}`;
+
+
+        console.log(
+            "✅ LIME image displayed."
+        );
+
+
+        // ----------------------------------
+        // LIME INFO
+        // ----------------------------------
+
+        console.log(
+            "LIME Grade:",
+            data.lime.grade
+        );
+
+        console.log(
+            "LIME Class:",
+            data.lime.class_name
+        );
 
     }
 
@@ -357,28 +460,38 @@ function displayResults(data) {
             "src"
         );
 
+
         limeImage.alt =
             "LIME explanation unavailable";
+
+
+        console.warn(
+            "⚠️ LIME explanation unavailable."
+        );
+
     }
 
 
-    // --------------------------------------
+    // ======================================
     // SHOW RESULTS
-    // --------------------------------------
+    // ======================================
 
     results.classList.remove(
         "hidden"
     );
 
 
-    setTimeout(function () {
+    setTimeout(
+        function () {
 
-        results.scrollIntoView({
-            behavior: "smooth",
-            block: "start"
-        });
+            results.scrollIntoView({
+                behavior: "smooth",
+                block: "start"
+            });
 
-    }, 100);
+        },
+        100
+    );
 }
 
 
@@ -390,7 +503,8 @@ function displayProbabilities(
     probabilityData
 ) {
 
-    probabilities.innerHTML = "";
+    probabilities.innerHTML =
+        "";
 
 
     if (
@@ -405,15 +519,6 @@ function displayProbabilities(
     }
 
 
-    // FastAPI returns:
-    //
-    // {
-    //   "No Diabetic Retinopathy": 2.13,
-    //   "Mild Diabetic Retinopathy": 1.92,
-    //   ...
-    // }
-
-
     Object.entries(
         probabilityData
     ).forEach(
@@ -424,57 +529,81 @@ function displayProbabilities(
 
 
             if (isNaN(value)) {
+
                 value = 0;
+
             }
 
 
             value =
                 Math.max(
                     0,
-                    Math.min(100, value)
+                    Math.min(
+                        100,
+                        value
+                    )
                 );
 
 
-            // Row
+            // --------------------------------
+            // ROW
+            // --------------------------------
+
             const row =
                 document.createElement(
                     "div"
                 );
 
+
             row.className =
                 "probability-row";
 
 
-            // Label
+            // --------------------------------
+            // LABEL
+            // --------------------------------
+
             const label =
                 document.createElement(
                     "div"
                 );
 
+
             label.className =
                 "probability-label";
+
 
             label.textContent =
                 className;
 
 
-            // Progress
+            // --------------------------------
+            // PROGRESS
+            // --------------------------------
+
             const progress =
                 document.createElement(
                     "div"
                 );
 
+
             progress.className =
                 "progress";
 
+
+            // --------------------------------
+            // BAR
+            // --------------------------------
 
             const bar =
                 document.createElement(
                     "div"
                 );
 
+
             bar.className =
                 "progress-bar";
+
 
             bar.style.width =
                 `${value}%`;
@@ -485,26 +614,37 @@ function displayProbabilities(
             );
 
 
-            // Value
+            // --------------------------------
+            // VALUE
+            // --------------------------------
+
             const valueText =
                 document.createElement(
                     "div"
                 );
 
+
             valueText.className =
                 "probability-value";
+
 
             valueText.textContent =
                 `${value.toFixed(2)}%`;
 
 
+            // --------------------------------
+            // ADD ELEMENTS
+            // --------------------------------
+
             row.appendChild(
                 label
             );
 
+
             row.appendChild(
                 progress
             );
+
 
             row.appendChild(
                 valueText
@@ -529,9 +669,11 @@ function showError(message) {
     errorMessage.textContent =
         message;
 
+
     errorBox.classList.remove(
         "hidden"
     );
+
 
     errorBox.scrollIntoView({
         behavior: "smooth",
@@ -547,7 +689,9 @@ function hideError() {
         "hidden"
     );
 
-    errorMessage.textContent = "";
+
+    errorMessage.textContent =
+        "";
 
 }
 
@@ -562,36 +706,47 @@ newAnalysisBtn.addEventListener(
 
         selectedFile = null;
 
-        imageInput.value = "";
+
+        imageInput.value =
+            "";
+
 
         fileName.textContent =
             "No image selected";
+
 
         previewImage.removeAttribute(
             "src"
         );
 
+
         previewContainer.classList.add(
             "hidden"
         );
+
 
         results.classList.add(
             "hidden"
         );
 
+
         limeImage.removeAttribute(
             "src"
         );
+
 
         originalImage.removeAttribute(
             "src"
         );
 
+
         probabilities.innerHTML =
             "";
 
+
         analyzeBtn.disabled =
             true;
+
 
         hideError();
 
